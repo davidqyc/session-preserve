@@ -1,0 +1,903 @@
+{
+  "reference_id": "session-preserve-private-runtime-reference-p1/v1",
+  "contract_sha256": "e3dcfe08480394b351b1905b29b205407a35a9bd2050ddc936ed89c76052b0d6",
+  "scope": "EXPERIMENTAL_P0_CONTRACT_SCAFFOLDING",
+  "key_count": 146,
+  "sections": [
+    "identity",
+    "runtime",
+    "lifecycle",
+    "observe_reconcile",
+    "live_steer",
+    "computer_use",
+    "receipts",
+    "foreground_cleanup",
+    "portability",
+    "hard_boundaries"
+  ],
+  "classification_counts": {
+    "PUBLIC_SCHEMA": 27,
+    "PUBLIC_VALIDATOR": 37,
+    "PUBLIC_TEST": 37,
+    "NOT_CARRIED_WITH_REASON": 45
+  },
+  "unexplained_omissions": 0,
+  "entries": [
+    {
+      "key": "contract_version",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "authorization.scope_version",
+      "reason": "Public scope version is separate from the neutral reference identity."
+    },
+    {
+      "key": "scope",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Private reference scope is not public authority. Public authorization has its own explicit scope contract."
+    },
+    {
+      "key": "implementation",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Private implementation path/code is not distributed or vendored. Public P0 validators and CLI gates are independently implemented."
+    },
+    {
+      "key": "validation",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_schemas.py#RuntimeSchemas.test_three_valid_artifacts",
+      "reason": "Invented synthetic artifacts only; no real runtime validation."
+    },
+    {
+      "key": "live_execution_authorized_by_this_contract",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_six_verbs_return_before_all_io_and_parsing",
+      "reason": "No active runtime entry is authorized or implemented."
+    },
+    {
+      "key": "identity",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_authorization",
+      "reason": "Exact caller identity and scope are required; binding/receipt validation completes the identity contract."
+    },
+    {
+      "key": "identity.required",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_binding",
+      "reason": "Full task/run/attempt/native-thread/turn/process structure; explicit null-turn phase only."
+    },
+    {
+      "key": "identity.task_id",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "authorization.task_id",
+      "reason": "Bounded non-secret ASCII token, 1..64 characters."
+    },
+    {
+      "key": "identity.run_attempt_ids",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "authorization.run_id,authorization.attempt_id",
+      "reason": "Canonical caller-minted RFC UUIDs."
+    },
+    {
+      "key": "identity.thread_turn_ids",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "binding.thread_id,binding.turn_id",
+      "reason": "Canonical native UUIDv7 current profile; null only in explicit THREAD_BOUND phase."
+    },
+    {
+      "key": "identity.process_identity",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "binding.process_identity",
+      "reason": "Selected app-server PID, birth_ns, executable SHA-256, exact launch_id; immutable binding."
+    },
+    {
+      "key": "identity.process_birth_source",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "binding.process_birth_source",
+      "reason": "Independent OS observation is required as a typed claim; P0 does not authenticate it."
+    },
+    {
+      "key": "identity.process_launch_source",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "binding.process_identity.launch_id",
+      "reason": "Canonical exact launch-correlation UUID, never latest-session guessing."
+    },
+    {
+      "key": "identity.pid_is_durable_authority",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_binding",
+      "reason": "PID-only process identity rejected; full incarnation/hash/launch mandatory."
+    },
+    {
+      "key": "identity.latest_session_guessing",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_verify_three_schemas_and_explicit_pairs_only",
+      "reason": "Only named local artifacts/pairs, never sibling/session discovery."
+    },
+    {
+      "key": "identity.all_present_identity_aliases_must_agree",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#verify_artifact",
+      "reason": "Only canonical identity fields are admitted; extra aliases rejected, explicitly paired identities must agree."
+    },
+    {
+      "key": "identity.duplicate_JSON_keys",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_pairs",
+      "reason": "Reject duplicate keys at every depth before schema interpretation, with no key/value echo."
+    },
+    {
+      "key": "runtime",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_probe_only_reads_static_metadata_and_stats_candidate",
+      "reason": "Passive/static inspection only, no provider launch."
+    },
+    {
+      "key": "runtime.route",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "binding.runtime_profile,binding.capabilities",
+      "reason": "Signed LaunchServices-hosted profile represented structurally, not live-attested."
+    },
+    {
+      "key": "runtime.thread_binding",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Live exact selected connection/thread binding cannot be proven by passive P0; deferred to independently reviewed P1 adapter. Static native identity is retained."
+    },
+    {
+      "key": "runtime.state",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "authorization.provider_evidence_store,binding.sandbox_posture",
+      "reason": "Isolated provider evidence outside worker-writable authority; no state created."
+    },
+    {
+      "key": "runtime.owner_config_mutation",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "binding.capabilities.owner_config_unchanged",
+      "reason": "Positive immutable typed claim; no owner config operations in P0."
+    },
+    {
+      "key": "runtime.pinned_private_executable",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_probe_only_reads_static_metadata_and_stats_candidate",
+      "reason": "Explicit configurable path, stat only, no pinned executable dependency."
+    },
+    {
+      "key": "runtime.version_alone_proves_capability",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_missing_or_insufficient_probe_is_unknown_or_unverified",
+      "reason": "Even declared version stays non-attesting; UNKNOWN/UNVERIFIED is explicit."
+    },
+    {
+      "key": "runtime.required_attestations",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "binding.capabilities",
+      "reason": "All six required booleans; version alone is insufficient."
+    },
+    {
+      "key": "runtime.adapter_included",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_six_verbs_return_before_all_io_and_parsing",
+      "reason": "No transport/active adapter; earliest P0 gate."
+    },
+    {
+      "key": "runtime.launch_resume_install_register",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_six_verbs_return_before_all_io_and_parsing",
+      "reason": "No launch/resume/install/register interaction."
+    },
+    {
+      "key": "lifecycle",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Static lifecycle/controller-provider distinction carried; no transition engine is implemented."
+    },
+    {
+      "key": "lifecycle.states",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "receipt.state",
+      "reason": "RUNNING/COMPLETED/FAILED/STOPPED/AMBIGUOUS controller classification."
+    },
+    {
+      "key": "lifecycle.terminal_states",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "COMPLETED/FAILED require corresponding provider fact; STOPPED remains independent."
+    },
+    {
+      "key": "lifecycle.terminal_states_absorbing",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Temporal transition enforcement needs the active P1 controller. P0 retains absorbing intent and validates only a static controller/provider projection."
+    },
+    {
+      "key": "lifecycle.AMBIGUOUS",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Freeze/kill-switch action enforcement needs P1 controller; P0 has zero active actions. Exact-stop carve-out and sticky controller/GUI ambiguity are documented."
+    },
+    {
+      "key": "lifecycle.STOPPED",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "receipt.state,receipt.provider_terminal_fact",
+      "reason": "Controller decision and provider terminal fact remain separate."
+    },
+    {
+      "key": "lifecycle.wall_clock",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "authorization.wall_clock_seconds",
+      "reason": "Positive explicit bound; monotonic active enforcement is deferred."
+    },
+    {
+      "key": "lifecycle.idle_clock",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "authorization.idle_seconds",
+      "reason": "Optional positive idle bound <= wall bound."
+    },
+    {
+      "key": "lifecycle.late_success",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Deadlines and late-event races need P1 controller. P0 retains no-reopen/no-extension intent without implementing clock or successor logic."
+    },
+    {
+      "key": "lifecycle.maximum_calls",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Provider/control call list <=128 and receipt byte ceiling enforced independently."
+    },
+    {
+      "key": "lifecycle.terminal_cleanup",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Single close path and actual <=5-second grace enforcement need P1 ownership adapter; P0 carries a static grace bound only and performs no cleanup."
+    },
+    {
+      "key": "lifecycle.permanent_service",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_surface_and_excluded_verbs",
+      "reason": "No daemon/server/queue/exec surface."
+    },
+    {
+      "key": "observe_reconcile",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_six_verbs_return_before_all_io_and_parsing",
+      "reason": "Observe/reconcile fail closed with zero state in P0."
+    },
+    {
+      "key": "observe_reconcile.evidence_sources",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Live provider/exact-rollout acquisition is an active P1 adapter responsibility; runtime verify reads only explicitly supplied bounded artifacts, not native history."
+    },
+    {
+      "key": "observe_reconcile.normalized_evidence_owner",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Trusted exact-connection normalization is deferred to P1; P0 PASS explicitly cannot authenticate provider facts."
+    },
+    {
+      "key": "observe_reconcile.transport_coordinator_loss",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "receipt.ambiguity_reasons",
+      "reason": "TRANSPORT_LOSS typed fact; no automatic reconciliation."
+    },
+    {
+      "key": "observe_reconcile.reconcile",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Full independent current-provider reconciliation is deferred to P1; reconcile is zero-state NOT_IMPLEMENTED_P0."
+    },
+    {
+      "key": "observe_reconcile.uncertain_correction",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Dynamic retention/reconciliation of a reservation requires P2 controller accounting. Static uncertain counting is carried without a ledger/send engine."
+    },
+    {
+      "key": "observe_reconcile.uncertain_GUI_execution",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Sticky action gating and no-new-facade enforcement require P3. Typed ambiguity is carried; P0 permits no GUI calls."
+    },
+    {
+      "key": "observe_reconcile.automatic_retry",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_surface_and_excluded_verbs",
+      "reason": "Retry absent; inactive verbs return before all I/O."
+    },
+    {
+      "key": "observe_reconcile.automatic_resume",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_surface_and_excluded_verbs",
+      "reason": "Resume absent; no fallback."
+    },
+    {
+      "key": "observe_reconcile.automatic_recovery_resend",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_six_verbs_return_before_all_io_and_parsing",
+      "reason": "No sends or recovery work at all in P0."
+    },
+    {
+      "key": "live_steer",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Typed static budget/evidence projection only; sends and dynamic reservations are deferred."
+    },
+    {
+      "key": "live_steer.method",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Actual turn/steer transport is deferred to P2. Retained exact-thread/expectedTurnId contract; no runtime/provider send code."
+    },
+    {
+      "key": "live_steer.thread_guard",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "RPC threadId guard requires P2 provider interaction; static receipt/binding native identity is validated only."
+    },
+    {
+      "key": "live_steer.turn_guard",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "RPC expectedTurnId guard requires P2; no queue/resume substitute. Static turn identity is retained."
+    },
+    {
+      "key": "live_steer.client_correlation",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "receipt.corrections[].client_id",
+      "reason": "Canonical logical-correction UUID; correlation is not an idempotency proof."
+    },
+    {
+      "key": "live_steer.correlation_proves_idempotency",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "P0 makes no send/idempotency claim; P2 must never infer idempotency from a client correlation alone."
+    },
+    {
+      "key": "live_steer.evidence_levels",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "receipt.corrections[].level",
+      "reason": "ACCEPTED/PERSISTED/CONSUMED/REJECTED/UNCERTAIN."
+    },
+    {
+      "key": "live_steer.initial_launch_counts",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Actual launch/accounting is deferred to P1/P2; retained launch consumes zero rule, no launcher or ledger in P0."
+    },
+    {
+      "key": "live_steer.default_max_corrections",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "authorization.max_corrections",
+      "reason": "Caller reference default 3 is documented; JSON requires an explicit maximum."
+    },
+    {
+      "key": "live_steer.allowed_budget_range",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_authorization",
+      "reason": "Integer 0..3; steer_authorized=false requires 0, no coercion."
+    },
+    {
+      "key": "live_steer.reserve_at",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Durable reserve-before-send timing requires P2 controller/ledger, not implemented in P0."
+    },
+    {
+      "key": "live_steer.uncertain_counts",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Unreleased uncertain records count toward the authorized maximum."
+    },
+    {
+      "key": "live_steer.release_rejected_reservation",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_correction",
+      "reason": "Release only for explicit rejected + mechanical non_delivery_proven facts; no live proof made."
+    },
+    {
+      "key": "live_steer.evidence_order",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_correction",
+      "reason": "Consumed requires persisted requires accepted; conflicting flags rejected."
+    },
+    {
+      "key": "live_steer.uncertainty_retains_previous_positive_facts",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_correction",
+      "reason": "UNCERTAIN may retain accepted/persisted flags and must remain unsettled."
+    },
+    {
+      "key": "live_steer.accepted_without_persistence",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Required ACCEPTED_NOT_PERSISTED ambiguity even when provider terminal fact is COMPLETED."
+    },
+    {
+      "key": "live_steer.same_logical_id_resend",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Dynamic resend prevention requires P2 ledger/controller. Duplicate static record IDs are rejected; no sends exist in P0."
+    },
+    {
+      "key": "live_steer.fourth_autonomous_correction",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "No over-budget autonomous send is allowed; actual send/budget gate is deferred to P2. Static receipt count is bounded 0..3."
+    },
+    {
+      "key": "live_steer.third_unsuccessful_correction",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Public typed CORRECTIONS_EXHAUSTED uses the authorized maximum 0..3, never a fixed ordinal."
+    },
+    {
+      "key": "live_steer.budget_reset_API",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "No active accounting/reset API exists in P0. P2 must retain no reset and single-attempt budget semantics."
+    },
+    {
+      "key": "live_steer.maximum_records",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Maximum 32 records and encoded size checked; duplicate logical IDs rejected."
+    },
+    {
+      "key": "computer_use",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_calculator",
+      "reason": "Static fixed Calculator facts and grants only; no live approval or tool calls."
+    },
+    {
+      "key": "computer_use.target",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "receipt.calculator.target",
+      "reason": "Exactly com.apple.calculator, no arbitrary app slot."
+    },
+    {
+      "key": "computer_use.server",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Live computer-use server/connection is deferred to P3; normative fixed server retained, no MCP start or call."
+    },
+    {
+      "key": "computer_use.method",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Actual mcpServer/tool/call is deferred to P3; no wire transport implemented."
+    },
+    {
+      "key": "computer_use.tools",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Only fixed get_app_state/click are retained for P3. P0 provides no tool implementation or generic router."
+    },
+    {
+      "key": "computer_use.arbitrary_application_argument",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_six_verbs_return_before_all_io_and_parsing",
+      "reason": "Trailing active inputs never consumed; no arbitrary application interface."
+    },
+    {
+      "key": "computer_use.caller_element_id_argument",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_six_verbs_return_before_all_io_and_parsing",
+      "reason": "No caller element ID is parsed or used."
+    },
+    {
+      "key": "computer_use.browser",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_surface_and_excluded_verbs",
+      "reason": "No generic Computer Use/browser execution surface."
+    },
+    {
+      "key": "computer_use.raw_JS_route",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_six_verbs_return_before_all_io_and_parsing",
+      "reason": "No JavaScript or unrestricted active input evaluation."
+    },
+    {
+      "key": "computer_use.generic_GUI_router",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_surface_and_excluded_verbs",
+      "reason": "Only fixed calculator parser entry, NOT_IMPLEMENTED_P0."
+    },
+    {
+      "key": "computer_use.explicit_authorization",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "authorization.calculator,receipt.identity",
+      "reason": "Exact refs plus distinct observe/mutate/foreground/pre-existing/restore grants."
+    },
+    {
+      "key": "computer_use.first_proof",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Unique first exact full get_app_state with disableDiff=true requires P3 live proof; no GUI state/approval acquisition in P0."
+    },
+    {
+      "key": "computer_use.first_approval_shape",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Same-thread message-only no-turn-context form validation needs P3 live adapter; raw approval payloads are excluded from P0 artifacts."
+    },
+    {
+      "key": "computer_use.first_approval_response",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Exactly one accept + content:null session response is retained for P3; P0 does not emit any approval."
+    },
+    {
+      "key": "computer_use.first_approval_response.action",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "P3 emits only accept for the exact first proof; P0 cannot respond or persist approval."
+    },
+    {
+      "key": "computer_use.first_approval_response.content",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "P3 content must be null; no raw payload response/log exists in P0."
+    },
+    {
+      "key": "computer_use.first_approval_is_session_proof",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_calculator",
+      "reason": "Approval alone is insufficient: clicks require separate CURRENT_SESSION fact."
+    },
+    {
+      "key": "computer_use.second_proof",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Second same-thread full read without repeated approval must establish CURRENT_SESSION in P3. P0 checks only a typed claimed fact, never authenticates the read."
+    },
+    {
+      "key": "computer_use.missing_first_approval",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_calculator",
+      "reason": "HOLD/unproven means no click; CURRENT_SESSION requires exactly one approval."
+    },
+    {
+      "key": "computer_use.repeated_sensitive_unrelated_ambiguous_approval",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "P3 live elicitation must fail closed for these cases; P0 excludes payloads and has no live approval handler."
+    },
+    {
+      "key": "computer_use.persistent_approval_emitted",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_calculator",
+      "reason": "persistent_approval=true is rejected; P0 emits no approval response."
+    },
+    {
+      "key": "computer_use.server_offered_persist",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "P3 must ignore, not echo/select/retain standing approval metadata. P0 never contacts a server or stores approval content."
+    },
+    {
+      "key": "computer_use.wire_schema_source",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Exact-thread mcpServerStatus/list with full detail is P3 live adapter work; no catalog/schema RPC in P0."
+    },
+    {
+      "key": "computer_use.wire_schema_check",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Live full schema recheck before session proof and before every click is retained for P3, not replaced by static metadata or receipt flags."
+    },
+    {
+      "key": "computer_use.element_index_type",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_calculator",
+      "reason": "Click facts require click_schema_string=true; actual wire schema acquisition is deferred."
+    },
+    {
+      "key": "computer_use.element_id",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "P3 wire IDs are 1..8 decimal digits as strings, leading zeros preserved. P0 deliberately accepts no raw element ID field or caller selector."
+    },
+    {
+      "key": "computer_use.resolution",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Fresh full snapshot, unique semantic match and immediate action require P3; P0 has no AX text, nonce, matching or click code."
+    },
+    {
+      "key": "computer_use.maximum_snapshot_age_seconds",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_calculator",
+      "reason": "Static claimed bound 1..1000 ms; live nonce/age validation is deferred."
+    },
+    {
+      "key": "computer_use.cross_snapshot_reuse",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "P3 single-use identity-bound snapshot nonces prevent reuse; P0 has no snapshots and exposes no GUI action path."
+    },
+    {
+      "key": "computer_use.stale_invalid_ambiguous_elements",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "P3 stale/invalid/ambiguous matching fails closed. P0 accepts no raw elements and performs no clicks."
+    },
+    {
+      "key": "computer_use.keys",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "receipt.calculator.keys",
+      "reason": "Fixed Zero..Nine/Add/Equals/Clear semantic enum, no arbitrary plan text."
+    },
+    {
+      "key": "receipts",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Allowlisted, typed, bounded static projection, not authority."
+    },
+    {
+      "key": "receipts.schema",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "receipt.schema",
+      "reason": "Separate frozen public receipt ID, preservation schema 3.0 unchanged."
+    },
+    {
+      "key": "receipts.maximum_bytes",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Normative encoded maximum 16384 bytes including whitespace."
+    },
+    {
+      "key": "receipts.construction",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Strict typed allowlist; detached validated JSON, not a raw event dump."
+    },
+    {
+      "key": "receipts.identity_projection",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "receipt.identity",
+      "reason": "Domain-separated task/run/attempt/process SHA-256 refs and native thread/turn UUIDs."
+    },
+    {
+      "key": "receipts.root_fields",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Documented public root allowlist adds separate provider fact, digests and bounds; no preservation fields changed."
+    },
+    {
+      "key": "receipts.identity_fields",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Documented provider discriminator/ref/native identity allowlist."
+    },
+    {
+      "key": "receipts.correction_fields",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Documented evidence flags plus explicit non-delivery and release proof fields."
+    },
+    {
+      "key": "receipts.calculator_fields",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Documented typed grants/session/click/key facts without raw GUI data."
+    },
+    {
+      "key": "receipts.cleanup_fields",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "Documented typed counts/resources/grace/restoration without raw errors or paths."
+    },
+    {
+      "key": "receipts.excluded",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#validate_receipt",
+      "reason": "No free-text/raw payload fields; exhaustive unknown-field rejection at every depth."
+    },
+    {
+      "key": "receipts.history_database",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_schemas.py#RuntimeSchemas.test_unknown_fields_and_exclusions_are_not_echoed",
+      "reason": "Receipt has no transcript/history fields or raw payload store."
+    },
+    {
+      "key": "receipts.automatic_write",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Intentional public divergence: future public controller writes one terminal receipt despite reference automatic_write=false. P0 writes no runtime state or terminal receipt; N6 ownership is deferred."
+    },
+    {
+      "key": "foreground_cleanup",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_cleanup",
+      "reason": "Typed cleanup projection; actual ownership discovery/release/restoration deferred."
+    },
+    {
+      "key": "foreground_cleanup.previous_frontmost",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Exact previous bundle/incarnation stays controller memory-only in P1/P3; P0 has no focus acquisition or private app identity storage."
+    },
+    {
+      "key": "foreground_cleanup.foreground_authorization_separate",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "authorization.calculator.foreground",
+      "reason": "Foreground authority is distinct from observation/mutation and restoration."
+    },
+    {
+      "key": "foreground_cleanup.Calculator_close",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_cleanup",
+      "reason": "Pre-existing Calculator cannot appear as an owned cleanup resource."
+    },
+    {
+      "key": "foreground_cleanup.resources",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "receipt.cleanup.owned_resources[].kind",
+      "reason": "CALCULATOR/SOCKET/APP_SERVER/HELPER typed enum, no implementation."
+    },
+    {
+      "key": "foreground_cleanup.socket_identity",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Run/attempt/handle nonce plus independent socket inode belongs to P1 ownership/IPC design. No socket implementation in P0; N9 remains gated."
+    },
+    {
+      "key": "foreground_cleanup.process_release",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Full-identity/incarnation recheck and actual process release need P1 ownership adapter; never implemented as PID/name killing in P0."
+    },
+    {
+      "key": "foreground_cleanup.adapter_release",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Atomic exact-handle recheck before release is deferred to P1; static claims do not implement host release."
+    },
+    {
+      "key": "foreground_cleanup.release_verification",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_cleanup",
+      "reason": "Verified cleanup requires exact released-resource absence facts; authenticity remains unverified."
+    },
+    {
+      "key": "foreground_cleanup.restore_verification",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Live prior-incarnation and still-task-frontmost checks require P3; P0 carries grant/typed result only, no restoration. User focus change must not be overridden."
+    },
+    {
+      "key": "foreground_cleanup.cleanup_failure",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_cleanup",
+      "reason": "Typed bounded skipped/error counters, verified=false on failure; no raw exceptions or retry."
+    },
+    {
+      "key": "foreground_cleanup.maximum_owned_resources",
+      "classification": "PUBLIC_VALIDATOR",
+      "target": "src/codex_preserve/runtime_control/_validation.py#_cleanup",
+      "reason": "Maximum 16, unique bounded refs, no raw handles or paths."
+    },
+    {
+      "key": "portability",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_conformance.py#P0Conformance.test_migration_mapping_and_archival_limits",
+      "reason": "All six migration classes and component mapping retained as documentation, not executable host migration."
+    },
+    {
+      "key": "portability.classes",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_conformance.py#P0Conformance.test_migration_mapping_and_archival_limits",
+      "reason": "Exactly six frozen classes; no active replay mechanism."
+    },
+    {
+      "key": "portability.classification",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_conformance.py#P0Conformance.test_migration_mapping_and_archival_limits",
+      "reason": "Every accepted component class is accounted for, plus public archival limits."
+    },
+    {
+      "key": "portability.classification.contract_code_exports",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_conformance.py#P0Conformance.test_migration_mapping_and_archival_limits",
+      "reason": "FILE_STATE_ONLY: integrity/privacy verification before use."
+    },
+    {
+      "key": "portability.classification.runtime_discovery_transport_ownership",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_conformance.py#P0Conformance.test_migration_mapping_and_archival_limits",
+      "reason": "HOST_BINDING: rediscover exact host identity."
+    },
+    {
+      "key": "portability.classification.accessibility_screen_recording",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_conformance.py#P0Conformance.test_migration_mapping_and_archival_limits",
+      "reason": "TCC_PERMISSION: separate authority; copying files grants nothing."
+    },
+    {
+      "key": "portability.classification.signed_app_launchservices",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_conformance.py#P0Conformance.test_migration_mapping_and_archival_limits",
+      "reason": "SIGNING_REGISTRATION: independently verify hosted signed route."
+    },
+    {
+      "key": "portability.classification.provider_login_control_pairing",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_conformance.py#P0Conformance.test_migration_mapping_and_archival_limits",
+      "reason": "ACCOUNT_OR_DEVICE_PAIRING: Owner reauth/pairing, no secret copying."
+    },
+    {
+      "key": "portability.classification.process_socket_session_approval_deadline_snapshot",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_conformance.py#P0Conformance.test_migration_mapping_and_archival_limits",
+      "reason": "EPHEMERAL: never replay on a new host/boot."
+    },
+    {
+      "key": "portability.new_host",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_conformance.py#P0Conformance.test_migration_mapping_and_archival_limits",
+      "reason": "Rediscover/revalidate runtime/schema/permissions under separate authority; no host operations in P0."
+    },
+    {
+      "key": "portability.private_coordinates_required",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_conformance.py#P0Conformance.test_migration_mapping_and_archival_limits",
+      "reason": "No private coordinates in the public matrix; neutral identifier/digest only."
+    },
+    {
+      "key": "portability.copying_files_grants_permissions",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_conformance.py#P0Conformance.test_migration_mapping_and_archival_limits",
+      "reason": "File copying never grants permissions; documented and checked."
+    },
+    {
+      "key": "portability.ephemeral_state_replay",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_conformance.py#P0Conformance.test_migration_mapping_and_archival_limits",
+      "reason": "Non-terminal/active grant/endpoints/identities remain EPHEMERAL, never actionable on another boot."
+    },
+    {
+      "key": "hard_boundaries",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_six_verbs_return_before_all_io_and_parsing",
+      "reason": "Process/network/state/parsing/stdin sentinels prove early fail-closed boundary."
+    },
+    {
+      "key": "hard_boundaries.nested_agent",
+      "classification": "PUBLIC_SCHEMA",
+      "target": "authorization.nested_start_policy",
+      "reason": "Nested control is forbidden policy; independent sandbox enforcement is explicitly unverified in P0."
+    },
+    {
+      "key": "hard_boundaries.owner_config_mutation",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_six_verbs_return_before_all_io_and_parsing",
+      "reason": "Zero filesystem access from all inactive verbs."
+    },
+    {
+      "key": "hard_boundaries.TCC_system_settings_credentials_account_network_mutation",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_six_verbs_return_before_all_io_and_parsing",
+      "reason": "No process/network/GUI/provider interactions or mutations."
+    },
+    {
+      "key": "hard_boundaries.production_control_restart",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_six_verbs_return_before_all_io_and_parsing",
+      "reason": "No process control or provider discovery."
+    },
+    {
+      "key": "hard_boundaries.daemon_login_item_registration",
+      "classification": "PUBLIC_TEST",
+      "target": "tests/test_runtime_control_cli.py#P0CLI.test_surface_and_excluded_verbs",
+      "reason": "No permanent-service commands or registration mechanism."
+    },
+    {
+      "key": "hard_boundaries.public_integration_packaging_decision",
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "The private reference does not authorize public packaging. Separate public authority fixes one distribution, unchanged version/dependencies/schema; no private packaging choice is copied."
+    }
+  ]
+}

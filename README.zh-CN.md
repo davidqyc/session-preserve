@@ -21,6 +21,13 @@ v0.2.0 第一版支持四种本地会话：
 
 它只读源会话，不会去修改原软件里的历史记录，也不会帮你 restore、resume、import、sync、reindex、repair、archive 或 delete。
 
+显式 `session-preserve runtime ...` namespace 目前仅含 **实验性 P0 合同脚手架**。
+P0 不启动或控制 Codex，不提供 live steer，也不执行 Computer Use；`runtime calculator`
+只是返回 `NOT_IMPLEMENTED_P0` 的 parser surface。仅 passive advisory probe 与本地结构 runtime verify 可用。
+preservation `export / verify / pack`、schema 3.0、版本及空依赖不变；独立 runtime schema 不会自动 pack，
+Runtime Control 不是 ProviderAdapter 导出来源，也不引入第二套 transcript/history 数据库。
+授权是 policy 而非同用户进程认证；未来主动执行必须证明 sandbox 边界。详见 [P0 合同说明](docs/runtime-control-p0.zh-CN.md)。
+
 > 如果你只是想临时导出一份可读文本，原软件自带的导出功能通常更简单。Session Preserve 解决的是另一件事：**独立保存、记录来源和覆盖范围，并且以后还能重新验这份包有没有变。**
 
 ## 安装

@@ -10,6 +10,16 @@ The exported package records where its readable content came from, what the adap
 
 Source sessions are read-only. Session Preserve does not restore, resume, import, sync, reindex, repair, archive, or delete them.
 
+The explicit `session-preserve runtime ...` namespace contains **experimental P0
+contract scaffolding** only. It does not start or control Codex, provide live steer
+or execute Computer Use. `runtime calculator` is a parser surface returning
+`NOT_IMPLEMENTED_P0`. Only passive advisory probe and local structural runtime
+verify operate. Preservation `export / verify / pack`, schema 3.0, version and empty
+dependencies are unchanged; runtime schemas are separate and are not automatically
+packed. Runtime Control is not a ProviderAdapter export provider. See the
+[P0 contracts and API](docs/runtime-control-p0.md) for sandbox, authorization and
+privacy boundaries; no second transcript/history database is introduced.
+
 > If you only need a readable transcript, use the product's built-in export surface when one is available. Session Preserve is for keeping an **independent preservation package** with provenance, coverage information, and later manifest-relative integrity verification.
 
 ## Install
