@@ -24,6 +24,10 @@ from ._v3_package import (
     write_v3_package,
 )
 from ._shared_core import json_bytes, sha256_bytes
+from ._runtime_contract import (
+    RUNTIME_SCHEMA_IDS, RECEIPT_MAX_BYTES, P0_INACTIVE_VERBS,
+    NOT_IMPLEMENTED_P0_EXIT, p0_unimplemented_result,
+)
 
 
 DEFAULT_OUTPUT_DIR = "~/Desktop/SessionPreserve"
@@ -37,6 +41,7 @@ usage:
   session-preserve export PROVIDER [OPTIONS]
   session-preserve verify PACKAGE_DIR [--json]
   session-preserve pack PACKAGE_DIR
+  session-preserve runtime VERB [OPTIONS]  (experimental P0 contracts)
   session-preserve --help | --version
 
 providers:
@@ -54,6 +59,7 @@ Examples:
 
 New exports use package schema 3.0. The verifier also permanently supports
 legacy Codex package schemas 2.1 and 2.2.
+Runtime P0 is experimental contract scaffolding; it does not start or control Codex.
 
 This project is independent and unofficial. It is not affiliated with,
 endorsed by, sponsored by, or certified by OpenAI, Anthropic, Moonshot AI,
@@ -72,6 +78,22 @@ def _verify_main(argv: Sequence[str]) -> int:
                         help="print the machine-readable receipt instead")
     options = parser.parse_args(argv)
 
+    # Recognize a runtime artifact solely to reject it. No runtime import, and
+    # directory-based preservation verification still takes its original path.
+    artifact = Path(options.package_dir)
+    try:
+        if artifact.is_file():
+            with artifact.open("rb") as stream:
+                candidate = stream.read(RECEIPT_MAX_BYTES + 1)
+            obj = json.loads(candidate) if len(candidate) <= RECEIPT_MAX_BYTES else None
+            if type(obj) is dict and obj.get("schema") in RUNTIME_SCHEMA_IDS:
+                print(json.dumps({
+                    "status": "RUNTIME_SCHEMA_NOT_PRESERVATION_PACKAGE",
+                    "detail": "Use session-preserve runtime verify for runtime artifacts.",
+                }, sort_keys=True), file=sys.stderr)
+                return 2
+    except (OSError, ValueError, RecursionError):
+        pass
     receipt = dict(verify.verify_package(Path(options.package_dir)))
     # The legacy verifier core keeps its historical identity for byte/regression
     # compatibility. The public v0.2 CLI reports the product that performed the
@@ -239,9 +261,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return _pack_main(args[1:])
     if args[0] == "export":
         return _export_main(args[1:])
+    if args[0] == "runtime":
+        # Earliest entry: even runtime imports are avoided for inactive verbs.
+        if len(args) > 1 and args[1] in P0_INACTIVE_VERBS:
+            print(json.dumps(p0_unimplemented_result(), sort_keys=True), file=sys.stderr)
+            return NOT_IMPLEMENTED_P0_EXIT
+        from .runtime_control._cli import main as runtime_main
+        return runtime_main(args[1:])
 
     print(
-        "unknown command %r; expected 'export', 'verify', or 'pack'" % args[0],
+        "unknown command %r; expected 'export', 'verify', 'pack', or 'runtime'" % args[0],
         file=sys.stderr,
     )
     return 2
