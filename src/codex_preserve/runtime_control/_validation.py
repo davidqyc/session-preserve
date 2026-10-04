@@ -279,8 +279,11 @@ def validate_binding(payload):
         if not value["capabilities"][name]:
             _fail("MISSING_ATTESTATION", "$.capabilities." + name)
     _sandbox(value["sandbox_posture"], "$.sandbox_posture")
-    # Explicit P0 residual, never an invented proof that nested starts are blocked.
-    _enum(value["nested_start_enforcement"], ("UNVERIFIED_PENDING_N6_N11",), "$.nested_start_enforcement")
+    # P0 artifacts may retain the explicit unverified residual; active P1 bindings
+    # use OWNER_STAGED_GATE_ATTESTED only after the separately reviewed launch gate.
+    _enum(value["nested_start_enforcement"],
+          ("UNVERIFIED_PENDING_N6_N11", "OWNER_STAGED_GATE_ATTESTED"),
+          "$.nested_start_enforcement")
     return value
 
 

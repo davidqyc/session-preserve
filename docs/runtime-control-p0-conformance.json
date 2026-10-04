@@ -16,10 +16,10 @@
     "hard_boundaries"
   ],
   "classification_counts": {
-    "PUBLIC_SCHEMA": 27,
-    "PUBLIC_VALIDATOR": 37,
+    "PUBLIC_SCHEMA": 26,
+    "NOT_CARRIED_WITH_REASON": 46,
     "PUBLIC_TEST": 37,
-    "NOT_CARRIED_WITH_REASON": 45
+    "PUBLIC_VALIDATOR": 37
   },
   "unexplained_omissions": 0,
   "entries": [
@@ -277,9 +277,9 @@
     },
     {
       "key": "observe_reconcile.transport_coordinator_loss",
-      "classification": "PUBLIC_SCHEMA",
-      "target": "receipt.ambiguity_reasons",
-      "reason": "TRANSPORT_LOSS typed fact; no automatic reconciliation."
+      "classification": "NOT_CARRIED_WITH_REASON",
+      "target": "docs/runtime-control-p0.md#retained-active-contract-deferred-implementation",
+      "reason": "Intentional public divergence: coordinator/client loss does not change the controller lifecycle state; reconnect/observe only refreshes client knowledge. Provider-connection loss is separately sticky TRANSPORT_LOSS."
     },
     {
       "key": "observe_reconcile.reconcile",
@@ -867,7 +867,7 @@
       "key": "hard_boundaries.nested_agent",
       "classification": "PUBLIC_SCHEMA",
       "target": "authorization.nested_start_policy",
-      "reason": "Nested control is forbidden policy; independent sandbox enforcement is explicitly unverified in P0."
+      "reason": "Nested control remains forbidden policy. P0 synthetic/unverified bindings use UNVERIFIED_PENDING_N6_N11; the reviewed public R1 active path requires OWNER_STAGED_GATE_ATTESTED after the owner-staged launch gate and per-start confinement proof. Structural verify validates the claim shape but does not authenticate it."
     },
     {
       "key": "hard_boundaries.owner_config_mutation",

@@ -193,7 +193,7 @@ guessing are invalid. P0 validates claims structurally and cannot authenticate t
 | `sandbox_posture.controller_channel_unreachable` | Boolean, must be true |
 | `sandbox_posture.policy_not_worker_writable` | Boolean, must be true |
 | `sandbox_posture.provider_evidence_not_worker_writable` | Boolean, must be true |
-| `nested_start_enforcement` | Exactly `UNVERIFIED_PENDING_N6_N11`; explicit P0 residual, never a live attestation |
+| `nested_start_enforcement` | `UNVERIFIED_PENDING_N6_N11` for P0 synthetic/unverified artifacts, or `OWNER_STAGED_GATE_ATTESTED` for a future active P1 binding after the owner-staged launch gate and confinement attestation; structural verify does not authenticate either claim |
 
 ## Canonical digests and refs
 
@@ -303,11 +303,12 @@ with reasons; the following normative intent is retained without a live code pat
 
 Lifecycle terminal COMPLETED / FAILED / STOPPED decisions are absorbing; late
 provider success never reopens a decision or extends a deadline. STOPPED describes
-the controller, not proof of provider termination. AMBIGUOUS freezes new actions
-except exact-identity stop/close. Observe is read-only; reconcile alone may clear
-ordinary coordinator loss. Controller loss and uncertain GUI execution remain
-sticky for the attempt. N6/N7 must settle successor/fencing/deadline and connection
-loss details before executable P1; P0 never reconstructs or executes a controller.
+the controller, not proof of provider termination. AMBIGUOUS freezes new actions except exact-identity stop/close. Observe is read-only.
+Under the reviewed public R1 architecture, coordinator/client loss does not change
+the controller lifecycle state; reconnect/observe only refreshes client knowledge.
+Provider-connection loss is sticky and never re-establishes side-effect authority.
+Controller loss and uncertain GUI execution remain sticky for the attempt. P0 never
+reconstructs or executes a controller.
 
 Initial launch consumes zero corrections. Reserve before the first provider-
 affecting send, once per logical client ID. Never resend that ID; a new logical
@@ -368,10 +369,11 @@ N6–N11 and N12–N13 remain separate pre-P1 and release gates, not implemented
 | Signed app / LaunchServices | SIGNING_REGISTRATION | Verify signed hosted route; no implicit signing/registration |
 | Provider login / control pairing | ACCOUNT_OR_DEVICE_PAIRING | Owner reauth/pairing; never copy credentials |
 | Process/socket/session approval/deadline/snapshot | EPHEMERAL | Never replay on another host or boot |
-| Terminal run directory with bounded public artifacts | FILE_STATE_ONLY | Archival evidence only; no executable authority |
+| Validated terminal receipt / explicitly public conformance evidence | FILE_STATE_ONLY | Archival evidence only; no executable authority |
 | Non-terminal state, active grant, endpoint, process/socket identity | EPHEMERAL | Discard actionability on another host/boot |
 
-Copying files grants no permissions. A bounded terminal receipt may be safe archival
-evidence after privacy review; machine-bound binding/ledger material is not thereby
-portable or actionable. Actual state-location/retention/sandbox feasibility and
-boot-session identity remain gated by N11/N13. Nothing in P0 enables replay.
+Copying files grants no permissions. A bounded terminal receipt and explicitly public conformance evidence may be safe
+archival evidence after privacy review. Authorization, binding, ledger, provider-state
+and other machine-bound runtime material are not thereby portable or actionable.
+Their bytes may remain local, but their control/migration authority is EPHEMERAL.
+Nothing in P0 enables replay.

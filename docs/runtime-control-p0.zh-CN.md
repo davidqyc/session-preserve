@@ -61,8 +61,10 @@ turn_id 仅在明确 THREAD_BOUND、尚未建立 turn 时可为 null。
 
 未来主动执行必须独立证明 sandbox：state、policy、controller channel 和 provider-native evidence store
 不能被 worker 写入/访问。保护已有授权/通道不等于阻止 worker 自行调用另一个 start。
-binding 显式记录 `UNVERIFIED_PENDING_N6_N11` 残余风险；P0 不假定嵌套 start 已被防护。
-N6–N11 的机制及 sandbox feasibility 必须单独审查后才能主动执行。
+binding 的 `nested_start_enforcement` 允许两个结构值：P0 synthetic/unverified artifact 使用
+`UNVERIFIED_PENDING_N6_N11`；未来 active P1 只有在 owner-staged launch gate 与 confinement attestation
+通过后才写 `OWNER_STAGED_GATE_ATTESTED`。结构 verify 只检查声明形状，不能认证该声明。
+P0 本身仍不启动 runtime。
 
 身份 ref 与授权/binding digest 使用 [规范定义](runtime-control-p0.md#canonical-digests-and-refs)
 的 domain-separated SHA-256；一致性摘要不是签名或认证。
@@ -79,7 +81,8 @@ device ID、前台 app identity、原始任务/纠偏文本、异常体及 trans
 全部参考合同 section/key 的唯一映射与延期理由见 [对照矩阵](runtime-control-p0-conformance.md)。
 终态 COMPLETED/FAILED/STOPPED absorbing，晚到 provider success 不重开终态或延长 deadline。
 AMBIGUOUS 冻结新副作用，仅允许 exact-identity stop/close；controller loss 与 GUI uncertainty 对本 attempt sticky。
-observe 不改变 controller 分类；只有 reconcile 可基于精确证据解除普通协调端丢失的不确定性。
+observe 不改变 controller 分类。经审阅的公共 R1 中，协调端/client 丢失不进入 controller lifecycle ambiguity；
+重新连接/observe 只刷新 client 对仍存 controller 的认知。provider connection loss 对本 attempt sticky，不能靠 reconnect 恢复副作用权限。
 不自动 retry/resume/resend，不提供 interrupt+resume fallback。
 
 纠偏先 reserve 后 send；同一 logical ID 不重发；UNCERTAIN 保留预算与既有正向证据。
@@ -115,7 +118,9 @@ public launcher/adapter 是新公共实现设计，不 vendoring 私有脚本。
 | signed app/LaunchServices | SIGNING_REGISTRATION |
 | provider login/control pairing | ACCOUNT_OR_DEVICE_PAIRING |
 | process/socket/session approval/deadline/snapshot | EPHEMERAL |
-| terminal directory 内 bounded public artifact | FILE_STATE_ONLY，仅 archival evidence |
+
+只有经过验证、privacy-bounded 的 terminal receipt 与明确 public conformance evidence 属于可移植 FILE_STATE_ONLY。authorization、binding、ledger、provider-state 等 machine-bound runtime material 即使本地保留，其 control/migration authority 仍为 EPHEMERAL，不可在新 host/boot 重放。
+| validated terminal receipt / 明确 public conformance evidence | FILE_STATE_ONLY，仅 archival evidence |
 | non-terminal state/active grant/endpoint/process identity | EPHEMERAL，新 host/boot 不可执行 |
 
 复制文件不授予权限。终态 bounded receipt 与机器绑定 binding/ledger 必须区分；文件归档不使后者可迁移或可执行。

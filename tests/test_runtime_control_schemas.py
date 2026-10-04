@@ -181,9 +181,14 @@ class RuntimeSchemas(unittest.TestCase):
                 value = fixture()
                 value[name][field] = False
                 self.assert_invalid(value, "SANDBOX_REQUIRED")
-        value = binding()
-        value["nested_start_enforcement"] = "ASSUMED_SAFE"
-        self.assert_invalid(value, "INVALID_ENUM")
+        for enforcement in ("UNVERIFIED_PENDING_N6_N11", "OWNER_STAGED_GATE_ATTESTED"):
+            value = binding()
+            value["nested_start_enforcement"] = enforcement
+            self.assertTrue(validate_binding(encoded(value)))
+        for invalid in ("ASSUMED_SAFE", "ATTESTED", "OWNER_STAGED_GATE_UNVERIFIED"):
+            value = binding()
+            value["nested_start_enforcement"] = invalid
+            self.assert_invalid(value, "INVALID_ENUM")
 
     def test_binding_phase_and_six_attestations(self):
         value = binding()
