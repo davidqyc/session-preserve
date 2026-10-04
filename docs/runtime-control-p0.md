@@ -180,13 +180,13 @@ guessing are invalid. P0 validates claims structurally and cannot authenticate t
 | `process_identity.executable_sha256` | Lowercase SHA-256 |
 | `process_identity.launch_id` | Canonical exact launch-correlation UUID |
 | `process_birth_source` | Exactly `INDEPENDENT_OS_OBSERVATION` |
-| `runtime_profile` | Exactly `codex-app-server-calculator-r1` |
+| `runtime_profile` | `codex-app-server-r1` (generic no-CU profile) or `codex-app-server-calculator-r1` (future Calculator profile); profile is a structural claim, not stage authority or live authentication |
 | `runtime_version` | Bounded version token; no capability inference |
 | `capabilities.openai_signed` | Boolean, must be true |
 | `capabilities.launchservices_hosted` | Boolean, must be true |
 | `capabilities.isolated_state` | Boolean, must be true |
 | `capabilities.owner_config_unchanged` | Boolean, must be true |
-| `capabilities.calculator_catalog_proven` | Boolean, must be true |
+| `capabilities.calculator_catalog_proven` | Required boolean; exactly false for `codex-app-server-r1`, exactly true for `codex-app-server-calculator-r1` |
 | `capabilities.other_capabilities_disabled` | Boolean, must be true |
 | `sandbox_posture.active_worker_sandboxed` | Boolean, must be true |
 | `sandbox_posture.runtime_state_not_worker_writable` | Boolean, must be true |
@@ -194,6 +194,37 @@ guessing are invalid. P0 validates claims structurally and cannot authenticate t
 | `sandbox_posture.policy_not_worker_writable` | Boolean, must be true |
 | `sandbox_posture.provider_evidence_not_worker_writable` | Boolean, must be true |
 | `nested_start_enforcement` | `UNVERIFIED_PENDING_N6_N11` for P0 synthetic/unverified artifacts, or `OWNER_STAGED_GATE_ATTESTED` for a future active P1 binding after the owner-staged launch gate and confinement attestation; structural verify does not authenticate either claim |
+
+### Profile-conditional Calculator invariants
+
+The generic `codex-app-server-r1` profile establishes **no Calculator capability**.
+Its binding requires `calculator_catalog_proven=false`; its other five capability
+attestations and all sandbox flags remain required true. An explicitly paired
+authorization must have all five normalized Calculator grant bits false, including
+the defaulted `mutate_preexisting=false`. This is checked only when authorization
+and binding are explicitly paired because a binding carries only the authorization
+digest, not the grant projection.
+
+A generic-profile receipt is valid only with zero Calculator activity: all five
+grant bits false, approval/click counts zero, no keys, `session_proof=UNPROVEN`,
+`click_schema_string=false`, `calculator_preexisting=false`,
+`previous_frontmost_captured=false`, no CALCULATOR_READ/CALCULATOR_CLICK calls and
+no task-owned CALCULATOR cleanup resource. `SCHEMA_READ` remains available for
+inventory/schema evidence. Uncontrolled GUI evidence is represented only through
+`GUI_EXECUTION` / `GUI_EXECUTION_UNCERTAIN` (and RESOURCE_UNVERIFIED when needed),
+never by inventing Calculator calls/resources. `STEER` remains structurally
+representable because P2 may later reuse the generic profile; profile validation
+is not stage authorization.
+
+The Calculator profile retains the existing all-positive catalog attestation and
+existing fixture/digest semantics for future P3. P0 does not authorize P1, P2 or
+P3 execution. `maximum_snapshot_age_ms` remains range-validated 1..1000 ms; it is
+not a profile-specific constant.
+
+New stable profile errors are:
+- `PROFILE_CAPABILITY_MISMATCH` at `$.capabilities.calculator_catalog_proven`;
+- `PROFILE_CALCULATOR_GRANT_FORBIDDEN` at `$` for explicit authorization+binding pairs;
+- `PROFILE_CALCULATOR_ACTIVITY_FORBIDDEN` at `$` after ordinary receipt structural checks.
 
 ## Canonical digests and refs
 
@@ -240,7 +271,7 @@ byte limit. All nested objects reject extra fields.
 | `schema` | Exact runtime control receipt ID |
 | `identity` | Exactly provider, task_ref, run_ref, attempt_ref, thread_id, turn_id, binding_phase, process_ref; same native rules as binding, refs are SHA-256 |
 | `authorization_sha256`, `binding_sha256` | Canonical digests |
-| `runtime_profile`, `runtime_version` | Same bounded profile/version as binding |
+| `runtime_profile`, `runtime_version` | Same two-profile enum/version contract as binding; explicit binding+receipt pairs must match |
 | `state` | RUNNING / COMPLETED / FAILED / STOPPED / AMBIGUOUS controller decision |
 | `decision` | NONE / PROVIDER_COMPLETED / PROVIDER_FAILED / REQUESTED_STOP / DEADLINE_EXPIRED / IDLE_EXPIRED / CORRECTIONS_EXHAUSTED / CAPABILITY_UNAVAILABLE / CONTROLLER_LOST / GUI_EXECUTION_UNCERTAIN / TRANSPORT_LOST |
 | `provider_terminal_fact` | NONE / COMPLETED / FAILED / STOPPED, separately observed fact |

@@ -8,9 +8,27 @@ import unittest
 from codex_preserve.runtime_control import (
     AUTHORIZATION_MAX_BYTES, BINDING_MAX_BYTES, RECEIPT_MAX_BYTES, ValidationError,
     validate_authorization, validate_binding, validate_receipt, validate_artifact,
-    identity_ref, authorization_digest, verify_artifact,
+    identity_ref, authorization_digest, binding_digest, verify_artifact,
 )
 from tests.runtime_fixtures import authorization, binding, receipt, encoded, correction, RUN
+
+
+GENERIC_PROFILE = "codex-app-server-r1"
+CALCULATOR_PROFILE = "codex-app-server-calculator-r1"
+
+
+def generic_binding(grant=None):
+    grant = authorization() if grant is None else grant
+    value = binding(grant)
+    value["runtime_profile"] = GENERIC_PROFILE
+    value["capabilities"]["calculator_catalog_proven"] = False
+    return value
+
+
+def generic_receipt(grant=None, bound=None):
+    grant = authorization() if grant is None else grant
+    bound = generic_binding(grant) if bound is None else bound
+    return receipt(grant, bound)
 
 
 class RuntimeSchemas(unittest.TestCase):
@@ -372,6 +390,124 @@ class RuntimeSchemas(unittest.TestCase):
         changed = dict(grant, max_corrections=2)
         with self.assertRaises(ValidationError):
             verify_artifact(encoded(bound), authorization=encoded(changed))
+
+    def test_runtime_profile_catalog_capability_is_profile_conditional(self):
+        generic = generic_binding()
+        self.assertTrue(validate_binding(encoded(generic)))
+        generic["capabilities"]["calculator_catalog_proven"] = True
+        error = self.assert_invalid(generic, "PROFILE_CAPABILITY_MISMATCH", validate_binding)
+        self.assertEqual(error.location, "$.capabilities.calculator_catalog_proven")
+
+        calculator = binding()
+        self.assertEqual(calculator["runtime_profile"], CALCULATOR_PROFILE)
+        calculator["capabilities"]["calculator_catalog_proven"] = False
+        error = self.assert_invalid(calculator, "MISSING_ATTESTATION", validate_binding)
+        self.assertEqual(error.location, "$.capabilities.calculator_catalog_proven")
+
+        for capability in binding()["capabilities"]:
+            if capability == "calculator_catalog_proven":
+                continue
+            trial = generic_binding()
+            trial["capabilities"][capability] = False
+            self.assert_invalid(trial, "MISSING_ATTESTATION", validate_binding)
+
+    def test_generic_profile_forbids_any_calculator_grant_when_paired(self):
+        grants = []
+        for field in ("observe", "foreground"):
+            grant = authorization()
+            grant["calculator"][field] = True
+            grants.append(grant)
+        grant = authorization()
+        grant["calculator"].update(observe=True, foreground=True, restore_foreground=True)
+        grants.append(grant)
+        grant = authorization()
+        grant["calculator"].update(observe=True, foreground=True, mutate=True)
+        grants.append(grant)
+        grant = authorization()
+        grant["calculator"].update(observe=True, foreground=True, mutate=True, mutate_preexisting=True)
+        grants.append(grant)
+
+        for grant in grants:
+            bound = generic_binding(grant)
+            with self.assertRaises(ValidationError) as caught:
+                verify_artifact(encoded(bound), authorization=encoded(grant))
+            self.assertEqual(caught.exception.code, "PROFILE_CALCULATOR_GRANT_FORBIDDEN")
+            self.assertEqual(caught.exception.location, "$")
+
+        grant = authorization()
+        bound = generic_binding(grant)
+        self.assertEqual(verify_artifact(encoded(bound), authorization=encoded(grant))["status"], "PASS")
+
+    def test_generic_profile_receipt_requires_zero_calculator_activity(self):
+        base = generic_receipt()
+        self.assertTrue(validate_receipt(encoded(base)))
+        variants = []
+
+        grant = copy.deepcopy(base)
+        grant["calculator"]["authorization"]["observe"] = True
+        variants.append(grant)
+
+        hold = copy.deepcopy(base)
+        hold["calculator"]["session_proof"] = "HOLD"
+        variants.append(hold)
+
+        schema = copy.deepcopy(base)
+        schema["calculator"]["click_schema_string"] = True
+        variants.append(schema)
+
+        preexisting = copy.deepcopy(base)
+        preexisting["calculator"]["calculator_preexisting"] = True
+        variants.append(preexisting)
+
+        read = copy.deepcopy(base)
+        read["provider_calls"] = [{"kind": "CALCULATOR_READ", "outcome": "OBSERVED"}]
+        variants.append(read)
+
+        resource = copy.deepcopy(base)
+        resource["cleanup"].update(requested=True, released=1, verified=True, owned_resources=[{
+            "kind": "CALCULATOR", "identity_ref": "a" * 64, "outcome": "RELEASED",
+            "exact_identity_verified": True, "absence_verified": True,
+        }])
+        variants.append(resource)
+
+        for trial in variants:
+            error = self.assert_invalid(trial, "PROFILE_CALCULATOR_ACTIVITY_FORBIDDEN", validate_receipt)
+            self.assertEqual(error.location, "$")
+
+    def test_generic_profile_keeps_detection_schema_read_and_future_steer_structurally_open(self):
+        value = generic_receipt()
+        value["provider_calls"] = [{"kind": "SCHEMA_READ", "outcome": "OBSERVED"}]
+        self.assertTrue(validate_receipt(encoded(value)))
+
+        for state in ("AMBIGUOUS", "STOPPED"):
+            value = generic_receipt()
+            value.update(state=state, decision="GUI_EXECUTION_UNCERTAIN", execution_ambiguous=True,
+                         ambiguity_reasons=["GUI_EXECUTION"])
+            self.assertTrue(validate_receipt(encoded(value)))
+
+        value = generic_receipt()
+        value["corrections"] = [correction()]
+        value["correction_count"] = 1
+        value["provider_calls"] = [{"kind": "STEER", "outcome": "ACCEPTED"}]
+        self.assertTrue(validate_receipt(encoded(value)))
+
+    def test_existing_fixture_digests_stay_stable(self):
+        self.assertEqual(authorization_digest(encoded(authorization())),
+                         "273c9622cfbadab3188e0d799201127ce943c970be89de87d1d2a5a85072901c")
+        self.assertEqual(binding_digest(encoded(binding())),
+                         "fcaab71cf3ef18017e1ce4ad05f354a24d11b019492428699f24eef6bb172a9b")
+        self.assertEqual(receipt()["binding_sha256"],
+                         "fcaab71cf3ef18017e1ce4ad05f354a24d11b019492428699f24eef6bb172a9b")
+
+    def test_generic_profile_pairing_and_receipt_profile_equality(self):
+        grant = authorization()
+        bound = generic_binding(grant)
+        rec = generic_receipt(grant, bound)
+        self.assertEqual(verify_artifact(encoded(rec), authorization=encoded(grant), binding=encoded(bound))["status"], "PASS")
+        rec["runtime_profile"] = CALCULATOR_PROFILE
+        with self.assertRaises(ValidationError) as caught:
+            verify_artifact(encoded(rec), authorization=encoded(grant), binding=encoded(bound))
+        self.assertEqual(caught.exception.code, "BINDING_RECEIPT_MISMATCH")
 
     def test_pass_explicitly_does_not_attest_execution(self):
         value = verify_artifact(encoded(receipt()))
