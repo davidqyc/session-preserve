@@ -84,14 +84,15 @@ class P0Conformance(unittest.TestCase):
             "Signed app / LaunchServices": "SIGNING_REGISTRATION",
             "Provider login / control pairing": "ACCOUNT_OR_DEVICE_PAIRING",
             "Process/socket/session approval/deadline/snapshot": "EPHEMERAL",
-            "Terminal run directory with bounded public artifacts": "FILE_STATE_ONLY",
+            "Validated terminal receipt / explicitly public conformance evidence": "FILE_STATE_ONLY",
             "Non-terminal state, active grant, endpoint, process/socket identity": "EPHEMERAL",
         }
         for component, classification in pairs.items():
             self.assertIn("| " + component + " | " + classification + " |", doc)
         self.assertIn("Copying files grants no permissions", doc)
         self.assertIn("never actionable", (ROOT / "docs/runtime-control-p0-conformance.md").read_text())
-        self.assertIn("machine-bound binding/ledger material", doc)
+        for phrase in ("Authorization, binding, ledger, provider-state", "control/migration authority is EPHEMERAL"):
+            self.assertIn(phrase, doc)
 
 
 if __name__ == "__main__":
