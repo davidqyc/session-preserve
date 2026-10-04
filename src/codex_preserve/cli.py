@@ -25,7 +25,7 @@ from ._v3_package import (
 )
 from ._shared_core import json_bytes, sha256_bytes
 from ._runtime_contract import (
-    RUNTIME_SCHEMA_IDS, RECEIPT_MAX_BYTES, P0_INACTIVE_VERBS,
+    RUNTIME_SCHEMA_IDS, RECEIPT_MAX_BYTES, P1_INACTIVE_VERBS,
     NOT_IMPLEMENTED_P0_EXIT, p0_unimplemented_result,
 )
 
@@ -41,7 +41,7 @@ usage:
   session-preserve export PROVIDER [OPTIONS]
   session-preserve verify PACKAGE_DIR [--json]
   session-preserve pack PACKAGE_DIR
-  session-preserve runtime VERB [OPTIONS]  (experimental P0 contracts)
+  session-preserve runtime VERB [OPTIONS]  (experimental runtime control)
   session-preserve --help | --version
 
 providers:
@@ -263,7 +263,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return _export_main(args[1:])
     if args[0] == "runtime":
         # Earliest entry: even runtime imports are avoided for inactive verbs.
-        if len(args) > 1 and args[1] in P0_INACTIVE_VERBS:
+        if len(args) > 1 and args[1] in P1_INACTIVE_VERBS:
             print(json.dumps(p0_unimplemented_result(), sort_keys=True), file=sys.stderr)
             return NOT_IMPLEMENTED_P0_EXIT
         from .runtime_control._cli import main as runtime_main

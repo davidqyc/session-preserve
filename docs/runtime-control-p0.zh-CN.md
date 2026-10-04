@@ -2,6 +2,10 @@
 
 [English / 完整规范字段表](runtime-control-p0.md) · [P1 对照矩阵](runtime-control-p0-conformance.md)
 
+P0 artifact schema、validator、digest 与 passive API 保持兼容。
+当前主动 CLI 范围见 [P1 composite proof 框架](runtime-control-p1.md)：生产支持集合为空，
+steer / calculator 仍保留最早零状态门禁。下方 P0 行为表是历史基线，不表示 P1 仍禁用全部六个动词。
+
 本轮仅提供 **EXPERIMENTAL / 实验性合同脚手架**，不属于稳定 preservation 兼容性承诺。
 P0 不启动或控制 Codex，不提供 live steer，也不执行 Computer Use。
 没有 controller、helper、IPC、daemon、server、queue 或真实 runtime state。

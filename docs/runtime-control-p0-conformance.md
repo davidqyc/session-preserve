@@ -1,5 +1,10 @@
 # P1 to public P0 conformance matrix
 
+This matrix retains the P0 schema/contract baseline. Current P1 implementation
+and admission gates are documented separately in [P1](runtime-control-p1.md).
+P0 gate tests now exercise the two still-inactive phases, steer and Calculator;
+no real runtime is admitted by the P1 production registry.
+
 Reference: `session-preserve-private-runtime-reference-p1/v1`
 Contract SHA-256: `e3dcfe08480394b351b1905b29b205407a35a9bd2050ddc936ed89c76052b0d6`
 

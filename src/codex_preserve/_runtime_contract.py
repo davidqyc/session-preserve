@@ -9,6 +9,7 @@ AUTHORIZATION_MAX_BYTES = 8 * 1024
 BINDING_MAX_BYTES = 12 * 1024
 RECEIPT_MAX_BYTES = 16 * 1024
 P0_INACTIVE_VERBS = ("start", "observe", "reconcile", "steer", "calculator", "stop")
+P1_INACTIVE_VERBS = ("steer", "calculator")
 NOT_IMPLEMENTED_P0_EXIT = 3
 
 

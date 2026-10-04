@@ -1,4 +1,4 @@
-"""Experimental P0 contracts. Import performs no discovery or runtime I/O.
+"""Experimental artifact contracts. Import performs no discovery or runtime I/O.
 
 Only the names in __all__ are public compatibility surfaces (experimental).
 """

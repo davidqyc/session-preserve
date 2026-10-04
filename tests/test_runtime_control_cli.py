@@ -13,7 +13,7 @@ import unittest
 from unittest import mock
 
 from codex_preserve import cli
-from codex_preserve._runtime_contract import P0_INACTIVE_VERBS, NOT_IMPLEMENTED_P0_EXIT
+from codex_preserve._runtime_contract import P1_INACTIVE_VERBS, NOT_IMPLEMENTED_P0_EXIT
 from codex_preserve.runtime_control import passive_probe
 from codex_preserve.runtime_control import _cli as runtime_cli, _validation, _local
 from tests.runtime_fixtures import authorization, binding, receipt, encoded
@@ -57,7 +57,7 @@ class P0CLI(unittest.TestCase):
     def test_six_verbs_return_before_all_io_and_parsing(self):
         before = list(self.root.rglob("*"))
         expected = None
-        for verb in P0_INACTIVE_VERBS:
+        for verb in P1_INACTIVE_VERBS:
             for main, prefix in ((cli.main, ["runtime"]), (runtime_cli.main, [])):
                 with self.subTest(verb=verb, entry=main.__module__):
                     with ExitStack() as stack:
@@ -85,7 +85,7 @@ sys.meta_path.insert(0, DenyRuntime())
 from codex_preserve.cli import main
 raise SystemExit(main(sys.argv[1:]))
 '''
-        for verb in P0_INACTIVE_VERBS:
+        for verb in P1_INACTIVE_VERBS:
             result = subprocess.run([os.sys.executable, "-B", "-c", script, "runtime", verb,
                                      "--state-root", str(self.root / "state")], cwd=self.root, env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode, 3, result.stderr)
@@ -97,7 +97,7 @@ raise SystemExit(main(sys.argv[1:]))
             with redirect_stdout(io.StringIO()) as output:
                 cli.main(["runtime", "--help"])
         self.assertEqual(caught.exception.code, 0)
-        for verb in ("probe", "verify") + P0_INACTIVE_VERBS:
+        for verb in ("probe", "verify") + P1_INACTIVE_VERBS:
             self.assertIn(verb, output.getvalue())
         for verb in ("computer-use", "resume", "retry", "exec", "daemon", "server", "queue"):
             with self.assertRaises(SystemExit) as caught:

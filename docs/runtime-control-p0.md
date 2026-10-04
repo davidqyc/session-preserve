@@ -1,12 +1,15 @@
-# Experimental Runtime Control P0 contracts
+# Experimental Runtime Control P0 artifact contracts
 
 [简体中文](runtime-control-p0.zh-CN.md) · [P1 conformance matrix](runtime-control-p0-conformance.md)
 
-This is **EXPERIMENTAL contract scaffolding**, outside the stable preservation
-compatibility promise. P0 does not start or control Codex, provide live steer,
-or perform Computer Use. There is no controller, helper, IPC endpoint, daemon,
-server, queue, runtime state directory, provider adapter or active provider code.
+The P0 artifact schemas, validators, digest domains and passive APIs below remain
+unchanged. Active CLI behavior is now specified by the
+[P1 composite-proof framework](runtime-control-p1.md). The production supported
+registry is empty; synthetic validation does not admit a real runtime. Steer and
+Calculator retain the earliest zero-state P0 gate.
 
+The following P0 CLI table is retained as the historical baseline, not a claim
+that all six verbs remain inactive after P1.
 The same `session-preserve` distribution contains both namespaces. Version,
 empty base dependencies and preservation package schema **3.0** are unchanged.
 Preservation `export / verify / pack` retain their read-only source behavior and
