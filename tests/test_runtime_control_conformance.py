@@ -28,6 +28,10 @@ class P0Conformance(unittest.TestCase):
         self.assertEqual(matrix["contract_sha256"], "e3dcfe08480394b351b1905b29b205407a35a9bd2050ddc936ed89c76052b0d6")
         self.assertEqual(matrix["key_count"], 146)
         self.assertEqual(matrix["unexplained_omissions"], 0)
+        rows = {row["key"]: row for row in matrix["entries"]}
+        self.assertIn("generic no-CU", rows["runtime.route"]["reason"])
+        self.assertIn("calculator_catalog_proven=false", rows["runtime.required_attestations"]["reason"])
+        self.assertIn("other five capabilities remain true", rows["runtime.required_attestations"]["reason"])
         self.assertEqual(len(matrix["entries"]), matrix["key_count"])
         self.assertEqual(len({row["key"] for row in matrix["entries"]}), matrix["key_count"])
         counts = {}

@@ -12,7 +12,9 @@ from .._runtime_contract import (
 )
 
 CONTRACT_VERSION = "session-preserve-runtime-scope/v1"
-PROFILE = "codex-app-server-calculator-r1"
+PROFILE_GENERIC = "codex-app-server-r1"
+PROFILE_CALCULATOR = "codex-app-server-calculator-r1"
+PROFILES = (PROFILE_GENERIC, PROFILE_CALCULATOR)
 STATES = ("RUNNING", "COMPLETED", "FAILED", "STOPPED", "AMBIGUOUS")
 TERMINAL = ("COMPLETED", "FAILED", "STOPPED")
 LEVELS = ("ACCEPTED", "PERSISTED", "CONSUMED", "REJECTED", "UNCERTAIN")
@@ -271,12 +273,19 @@ def validate_binding(payload):
     _native_identity(value, "$")
     _process(value["process_identity"], "$.process_identity")
     _enum(value["process_birth_source"], ("INDEPENDENT_OS_OBSERVATION",), "$.process_birth_source")
-    _enum(value["runtime_profile"], (PROFILE,), "$.runtime_profile")
+    _enum(value["runtime_profile"], PROFILES, "$.runtime_profile")
     _pattern(value["runtime_version"], _VERSION, "$.runtime_version")
     _object(value["capabilities"], CAPABILITIES, location="$.capabilities")
     for name in CAPABILITIES:
         _bool(value["capabilities"][name], "$.capabilities." + name)
-        if not value["capabilities"][name]:
+    catalog_proven = value["capabilities"]["calculator_catalog_proven"]
+    if value["runtime_profile"] == PROFILE_CALCULATOR:
+        if not catalog_proven:
+            _fail("MISSING_ATTESTATION", "$.capabilities.calculator_catalog_proven")
+    elif catalog_proven:
+        _fail("PROFILE_CAPABILITY_MISMATCH", "$.capabilities.calculator_catalog_proven")
+    for name in CAPABILITIES:
+        if name != "calculator_catalog_proven" and not value["capabilities"][name]:
             _fail("MISSING_ATTESTATION", "$.capabilities." + name)
     _sandbox(value["sandbox_posture"], "$.sandbox_posture")
     # P0 artifacts may retain the explicit unverified residual; active P1 bindings
@@ -391,6 +400,31 @@ def _cleanup(value, calculator):
         _fail("RESTORE_AUTHORITY_REQUIRED", location)
 
 
+def _calculator_grant_is_all_false(grant):
+    return not any(grant[name] for name in (
+        "observe", "mutate", "mutate_preexisting", "foreground", "restore_foreground"
+    ))
+
+
+def _generic_profile_receipt_has_calculator_activity(value):
+    calculator = value["calculator"]
+    if not _calculator_grant_is_all_false(calculator["authorization"]):
+        return True
+    if calculator["approval_count"] != 0 or calculator["click_count"] != 0 or calculator["keys"]:
+        return True
+    if calculator["session_proof"] != "UNPROVEN":
+        return True
+    if (calculator["click_schema_string"] or calculator["calculator_preexisting"]
+            or calculator["previous_frontmost_captured"]):
+        return True
+    if any(call["kind"] in ("CALCULATOR_READ", "CALCULATOR_CLICK")
+           for call in value["provider_calls"]):
+        return True
+    if any(resource["kind"] == "CALCULATOR" for resource in value["cleanup"]["owned_resources"]):
+        return True
+    return False
+
+
 def validate_receipt(payload):
     value = _decode(payload, RECEIPT_MAX_BYTES)
     fields = ("schema", "identity", "authorization_sha256", "binding_sha256", "runtime_profile",
@@ -405,7 +439,7 @@ def validate_receipt(payload):
         _pattern(identity[name], _HASH, "$.identity." + name)
     for name in ("authorization_sha256", "binding_sha256"):
         _pattern(value[name], _HASH, "$." + name)
-    _enum(value["runtime_profile"], (PROFILE,), "$.runtime_profile")
+    _enum(value["runtime_profile"], PROFILES, "$.runtime_profile")
     _pattern(value["runtime_version"], _VERSION, "$.runtime_version")
     _enum(value["state"], STATES, "$.state")
     _enum(value["decision"], ("NONE", "PROVIDER_COMPLETED", "PROVIDER_FAILED", "REQUESTED_STOP",
@@ -469,6 +503,8 @@ def validate_receipt(payload):
             refs.add(call["correlation_ref"])
     if sum(c["kind"] == "CALCULATOR_CLICK" for c in value["provider_calls"]) != value["calculator"]["click_count"]:
         _fail("CLICK_CALL_COUNT_MISMATCH")
+    if value["runtime_profile"] == PROFILE_GENERIC and _generic_profile_receipt_has_calculator_activity(value):
+        _fail("PROFILE_CALCULATOR_ACTIVITY_FORBIDDEN", "$")
     return value
 
 
@@ -534,6 +570,8 @@ def verify_artifact(payload, *, authorization=None, binding=None):
             _fail("AUTHORIZATION_DIGEST_MISMATCH")
         if any(grant[n] != bound[n] for n in ("task_id", "run_id", "attempt_id", "provider")):
             _fail("PAIRED_IDENTITY_MISMATCH")
+        if bound["runtime_profile"] == PROFILE_GENERIC and not _calculator_grant_is_all_false(grant["calculator"]):
+            _fail("PROFILE_CALCULATOR_GRANT_FORBIDDEN", "$")
         checks.append("authorization_binding")
     if schema == RECEIPT_SCHEMA:
         if grant is not None:

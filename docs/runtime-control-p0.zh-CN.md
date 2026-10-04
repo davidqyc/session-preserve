@@ -76,6 +76,26 @@ Receipt 排除 AX tree、默认截图、raw GUI text、approval payload、accoun
 device ID、前台 app identity、原始任务/纠偏文本、异常体及 transcript/history。没有自由文本载荷槽。
 授权和 binding 的 scope 路径不属于 privacy-bounded receipt，需独立保留策略。
 
+## Runtime profile 与 Calculator 条件约束
+
+binding / receipt 的 `runtime_profile` 允许两个结构值：
+
+- `codex-app-server-r1`：通用 no-CU profile；
+- `codex-app-server-calculator-r1`：未来 Calculator/P3 profile。
+
+profile 是结构声明，不是阶段授权，也不认证真实 runtime 行为。
+通用 profile **必须** `calculator_catalog_proven=false`；其余五个 capability 与全部 sandbox posture 仍必须为 true。
+若显式同时提供 authorization + generic binding，规范化后的五个 Calculator grant（含默认的 `mutate_preexisting=false`）必须全部 false。
+
+通用 profile 的 receipt 必须是 zero-Calculator：五个 grant 全 false、approval/click 为 0、keys 为空、`session_proof=UNPROVEN`、
+`click_schema_string=false`、`calculator_preexisting=false`、`previous_frontmost_captured=false`，且不得含 CALCULATOR_READ / CALCULATOR_CLICK 或 task-owned CALCULATOR resource。
+`SCHEMA_READ` 仍可表示 inventory/schema 证据；非授权 GUI 异常只能用 `GUI_EXECUTION` / `GUI_EXECUTION_UNCERTAIN`（必要时加 RESOURCE_UNVERIFIED）表达，不能伪装成 Calculator activity。
+`STEER` 在结构层仍可存在，因为后续 P2 可以复用同一 generic profile；这不表示 P1 已获 steer 阶段授权。
+
+Calculator profile 保持既有 `calculator_catalog_proven=true` 和旧 fixture/digest 语义，P3 仍未授权。
+`maximum_snapshot_age_ms` 仍是 1..1000 ms 的范围校验，不是 profile 固定常量。
+结构 verify 仍是 `LOCAL_STRUCTURAL_ONLY` / `execution_attested=false`。
+
 ## 保留合同，延期主动机制
 
 全部参考合同 section/key 的唯一映射与延期理由见 [对照矩阵](runtime-control-p0-conformance.md)。

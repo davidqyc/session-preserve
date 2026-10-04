@@ -135,7 +135,7 @@
       "key": "runtime.route",
       "classification": "PUBLIC_SCHEMA",
       "target": "binding.runtime_profile,binding.capabilities",
-      "reason": "Signed LaunchServices-hosted profile represented structurally, not live-attested."
+      "reason": "Public v1 structurally distinguishes generic no-CU codex-app-server-r1 from future codex-app-server-calculator-r1; profile is a claim, not stage authority or live authentication."
     },
     {
       "key": "runtime.thread_binding",
@@ -171,7 +171,7 @@
       "key": "runtime.required_attestations",
       "classification": "PUBLIC_SCHEMA",
       "target": "binding.capabilities",
-      "reason": "All six required booleans; version alone is insufficient."
+      "reason": "Intentional public divergence from the private all-six-positive rule: the generic no-CU profile requires calculator_catalog_proven=false while the other five capabilities remain true; the Calculator profile requires all six true. Structural validation does not authenticate runtime facts."
     },
     {
       "key": "runtime.adapter_included",
