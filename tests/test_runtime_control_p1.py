@@ -773,6 +773,13 @@ class FinalBoundaryEvidence(P1FixtureCase):
         self.assertCode("INSTANCE_ISOLATION_NOT_ATTESTED", proof.establish)
         self.assertFalse(any(m == "turn/start" for m, p in driver.calls))
 
+    def test_malformed_canary_encoding_stays_typed_confinement_failure(self):
+        proof, driver = self.direct(); route = driver.canary_route(THREAD)
+        route.execute_probe = lambda *args: {"stdout": b"invalid JSON", "helper_absent": True}
+        error = self.assertCode("SANDBOX_CONFINEMENT_NOT_ATTESTED", lambda: ConfinementCanary().run(
+            rtca=self.f.record, authorization=self.f.grant, thread_id=THREAD, instance_id=route.instance_id, route=route))
+        self.assertEqual(error.reason, "SETUP_OR_POSTCHECK")
+
     def test_transport_bypass_and_active_notifications_send_nothing(self):
         c = self.start(); before = copy.deepcopy(c.driver.calls)
         self.assertCode("ACTIVE_METHOD_REFUSED", lambda: c.driver.outbound_guard("thread/settings/update", {}))
@@ -805,6 +812,41 @@ class NativeControllerEvidence(unittest.TestCase):
         self.assertGreater(identity["birth_ns"], 0)
         self.assertGreater(observer.now_ns(), 0)
         self.assertTrue(observer.boot_id())
+
+
+class NativeIPCEvidence(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == "darwin" or sys.platform.startswith("linux"), "native owner Unix IPC")
+    def test_exact_owner_peer_and_generation_handshake(self):
+        import threading
+        from codex_preserve.runtime_control._ipc import ControllerEndpoint, request_controller
+        from codex_preserve.runtime_control._platform import OSObserver
+        with tempfile.TemporaryDirectory(prefix="sp-", dir="/tmp") as temp:
+            root = Path(temp).resolve(); root.chmod(0o700)
+            run_id, attempt_id = str(uuid.uuid4()), str(uuid.uuid4())
+            endpoint = ControllerEndpoint(root / "controller.sock", run_id, attempt_id, 1)
+            identity = endpoint.bind()
+            errors = []
+            def serve():
+                try:
+                    endpoint.serve_once(lambda verb: {"status": "RUNNING", "verb": verb})
+                except Exception as error:
+                    errors.append(type(error).__name__)
+            server = threading.Thread(target=serve)
+            server.start()
+            try:
+                result = request_controller(endpoint.path, run_id, attempt_id, 1, identity, "observe",
+                                            OSObserver().controller_identity())
+                self.assertEqual(result, {"status": "RUNNING", "verb": "observe"})
+                self.assertEqual(endpoint.path.stat().st_mode & 0o777, 0o600)
+                with self.assertRaises(ValidationError) as caught:
+                    request_controller(endpoint.path, run_id, attempt_id, 1, dict(identity, inode=identity["inode"] + 1),
+                                       "observe", OSObserver().controller_identity())
+                self.assertEqual(caught.exception.code, "STALE_CONTROLLER_CLIENT")
+            finally:
+                server.join(timeout=2)
+                endpoint.close()
+            self.assertFalse(server.is_alive()); self.assertEqual(errors, [])
+            self.assertFalse(endpoint.path.exists())
 
 
 if __name__ == "__main__":

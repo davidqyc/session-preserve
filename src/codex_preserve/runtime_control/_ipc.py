@@ -1,5 +1,6 @@
 """Bounded owner-only Unix IPC with exact run/generation/inode fencing."""
 import os
+import ctypes
 import socket
 import stat
 import struct
@@ -17,6 +18,13 @@ def peer_uid(connection):
         return connection.getpeereid()[0]
     if hasattr(socket, "SO_PEERCRED"):
         return struct.unpack("3i", connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))[1]
+    if sys.platform == "darwin":
+        lib = ctypes.CDLL("/usr/lib/libSystem.B.dylib")
+        uid, gid = ctypes.c_uint32(), ctypes.c_uint32()
+        lib.getpeereid.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32)]
+        lib.getpeereid.restype = ctypes.c_int
+        if lib.getpeereid(connection.fileno(), ctypes.byref(uid), ctypes.byref(gid)) == 0:
+            return uid.value
     fail("IPC_PEER_NOT_ATTESTED")
 
 

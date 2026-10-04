@@ -194,7 +194,8 @@ class ConfinementCanary:
                       "policy_digest": effective_policy_digest,
                       "writable_roots_digest": digest("canary-writable-roots/v1", authorization["worker_writable_roots"])}
         except Exception as error:
-            failure = error if isinstance(error, ValidationError) else confinement_failure("SETUP_OR_POSTCHECK")
+            failure = error if isinstance(error, ValidationError) and error.code == "SANDBOX_CONFINEMENT_NOT_ATTESTED" \
+                else confinement_failure("SETUP_OR_POSTCHECK")
         finally:
             cleanup_errors = []
             for listener in listeners:
