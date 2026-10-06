@@ -19,7 +19,7 @@ public vocabulary — "issue", "retry", "Codex", "owner", "archive" — and
 synthetic fixture paths such as ``/Users/testowner/...`` must keep passing, or
 the reused test suite becomes impossible to publish.
 
-Two narrow escape hatches exist, and both are bounded by the code rather than
+Three narrow escape hatches exist, and all are bounded by the code rather than
 by a promise.
 
 The first is the rule table below. A few rules have to spell out the shape
@@ -38,6 +38,14 @@ on the offending line or the line directly above it. The marker exempts
 credential-shape rules only. It can never exempt a real home path, a stored
 publishing credential, or any other non-credential rule.
 
+The third is ``public-hygiene: synthetic-share-fixture`` on the same line or
+the line directly above a share URL. It exempts only the all-zero synthetic
+share ID. Other IDs, credentials and findings on those lines still fail.
+
+Local generated directories stay skipped, but Git-tracked files beneath
+those directory names are findings regardless of their contents. Git is
+queried locally; a source tree outside Git retains the normal file scan.
+
 Usage:
     python3 tools/public_hygiene_scan.py [ROOT]
     exit 0  clean
@@ -47,11 +55,14 @@ Usage:
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
 MARKER = "public-hygiene: synthetic-credential-fixture"
+SHARE_MARKER = "public-hygiene: synthetic-share-fixture"
+SYNTHETIC_SHARE_ID = "00000000-0000-0000-0000-000000000000"
 # This scanner has to name the coordinates it forbids, so its own rule table
 # is the one region content rules do not apply to. The region is bounded by
 # these two markers and its size is reported on every run, so it cannot grow
@@ -79,8 +90,11 @@ FORBIDDEN_NAME_RULES: Tuple[Tuple[str, str, "re.Pattern[str]"], ...] = (
      "a Codex rollout / session index file must never be committed",
      re.compile(r"^(rollout-.*\.jsonl|session_index\.jsonl)$")),
     ("secret_bearing_file",
-     "a key, certificate or environment file must never be committed",
-     re.compile(r"^(\.env(\..+)?|id_[a-z]+|.*\.(pem|p12|pfx|key|keystore))$")),
+     "a key, signing profile, keychain, certificate or environment file "
+     "must never be committed",
+     re.compile(r"^(\.env(\..+)?|id_[a-z]+|.*\."
+                r"(pem|p12|pfx|key|keystore|p8|mobileprovision|"
+                r"provisionprofile|keychain|keychain-db))$", re.IGNORECASE)),
 )
 
 # (code, description, pattern, exemptable_by_marker)
@@ -120,6 +134,12 @@ CONTENT_RULES: Tuple[Tuple[str, str, "re.Pattern[str]", bool], ...] = (
     ("credential_pypi_token",
      "a PyPI API token literal",
      re.compile(r"\bpypi-AgE[A-Za-z0-9_-]{16,}"), True),
+    ("sensitive_chatgpt_share_url",
+     "a personal ChatGPT share-link transport token",
+     re.compile(r"(?<![A-Za-z0-9.+-])https://(?:chatgpt\.com|chat\.openai\.com)"
+                r"/share/(?P<share_id>[0-9a-f]{8}-[0-9a-f]{4}-"
+                r"[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"
+                r"(?![A-Za-z0-9_-])", re.IGNORECASE), False),
     ("stored_index_credential_reference",
      "a stored index credential; release auth must be Trusted Publishing/OIDC",
      re.compile(r"(?i)secrets\.(?:PYPI|TEST_PYPI|TWINE)[A-Z0-9_]*"
@@ -188,6 +208,46 @@ def iter_files(root: Path) -> Iterable[Path]:
     return entries
 
 
+def tracked_skip_findings(root: Path) -> List[Finding]:
+    """Reject indexed paths hidden by directory skips, including deletions.
+
+    Use NUL-delimited index paths, not Git's quoted display output. Querying
+    from the scan root also supports subdirectory scans and linked worktrees.
+    An unavailable index in a detected checkout fails closed; a non-checkout
+    (including an invalid .git pointer) keeps the ordinary scan behavior.
+    """
+    try:
+        checkout = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    except OSError:
+        if not (root / ".git").exists():
+            return []
+        return [Finding(".", 0, "git_tracking_unavailable",
+                        "cannot inspect local Git tracked paths", "git unavailable")]
+    if checkout.returncode != 0:
+        return []
+    tracked = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "--cached", "--full-name",
+         "-z", "--", "."],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    if tracked.returncode != 0:
+        return [Finding(".", 0, "git_tracking_unavailable",
+                        "cannot inspect local Git tracked paths", "git index unavailable")]
+    top = Path(checkout.stdout.decode("utf-8", "surrogateescape").rstrip("\n"))
+    findings = []
+    names = tracked.stdout.decode("utf-8", "surrogateescape").split("\0")
+    for name in sorted(set(names) - {""}):
+        relative = (top / name).relative_to(root.resolve())
+        if any(_skip_dir(part) for part in Path(name).parts[:-1]):
+            value = relative.as_posix()
+            findings.append(Finding(
+                value, 0, "tracked_file_in_skipped_directory",
+                "a Git-tracked file beneath a skipped directory must not be published",
+                value))
+    return findings
+
+
 def _read_text(path: Path) -> Optional[str]:
     try:
         data = path.read_bytes()
@@ -212,12 +272,16 @@ def scan_file(path: Path, relative: str) -> List[Finding]:
     lines = text.split("\n")
     is_scanner = relative == SCANNER_SELF_PATH
     marked = set()
+    share_marked = set()
     exempt_region = set()
     inside_region = False
     for index, line in enumerate(lines, start=1):
         if MARKER in line:
             marked.add(index)
             marked.add(index + 1)
+        if SHARE_MARKER in line:
+            share_marked.add(index)
+            share_marked.add(index + 1)
         if REGION_BEGIN not in line and REGION_END not in line:
             if inside_region:
                 exempt_region.add(index)
@@ -245,6 +309,9 @@ def scan_file(path: Path, relative: str) -> List[Finding]:
         # non-credential finding sharing the line would escape.
         for code, detail, pattern, exemptable in CONTENT_RULES:
             for match in pattern.finditer(line):
+                if (code == "sensitive_chatgpt_share_url" and index in share_marked
+                        and match.group("share_id") == SYNTHETIC_SHARE_ID):
+                    continue
                 if exemptable and index in marked:
                     continue
                 findings.append(Finding(
@@ -258,6 +325,10 @@ def scan_file(path: Path, relative: str) -> List[Finding]:
                     _excerpt(line, match.start(), match.end())))
         for match in _ISSUE_RE.finditer(line):
             before = line[:match.start()]
+            # Only a complete decimal HTML entity gets this exemption.
+            # Malformed entities and issue references in HTML still fail.
+            if before.endswith("&") and line[match.end():match.end() + 1] == ";":
+                continue
             if _QUALIFIED_ISSUE_RE.search(before):
                 continue
             findings.append(Finding(
@@ -268,7 +339,7 @@ def scan_file(path: Path, relative: str) -> List[Finding]:
 
 
 def scan(root: Path) -> List[Finding]:
-    findings: List[Finding] = []
+    findings: List[Finding] = tracked_skip_findings(root)
     for path in iter_files(root):
         # POSIX separators, so SCANNER_SELF_PATH compares identically on
         # every platform.

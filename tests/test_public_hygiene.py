@@ -14,6 +14,7 @@ Two conventions in this file are deliberate:
 """
 
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -82,6 +83,7 @@ class CandidateTreeIsPublishable(unittest.TestCase):
              "credential_jwt",
              "credential_cookie_header",
              "credential_pypi_token",
+             "sensitive_chatgpt_share_url",
              "stored_index_credential_reference"])
 
     def test_rules_naming_a_specific_portfolio_do_not_come_back(self):
@@ -295,6 +297,186 @@ class RuleTableExemptionIsScopedToTheScanner(unittest.TestCase):
                   in scanner._REGION_LINES.items() if count}
         self.assertEqual(list(exempt), [scanner.SCANNER_SELF_PATH])
         self.assertGreater(exempt[scanner.SCANNER_SELF_PATH], 0)
+
+
+class TrackedSkippedDirectoryTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="hygiene-git-test-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.git("init", "-q")
+
+    def git(self, *args):
+        return subprocess.run(["git", "-C", str(self.root)] + list(args),
+                              check=True, capture_output=True, text=True)
+
+    def write(self, name):
+        path = self.root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("ordinary public data\n", encoding="utf-8")
+        return path
+
+    def test_untracked_and_ignored_generated_files_stay_skipped(self):
+        self.write("build/local.py")
+        self.write("dist/local.txt")
+        self.write("node_modules/example/index.js")
+        (self.root / ".gitignore").write_text("dist/\n", encoding="utf-8")
+        self.assertEqual(scanner.scan(self.root), [])
+
+    def test_indexed_files_in_skipped_directories_are_findings(self):
+        names = ["build/committed.txt", "nested/dist/space name.txt",
+                 "node_modules/example/index.js", "src/example.egg-info/private.txt",
+                 ".venv/private.bin", "cache/__pycache__/line\nbreak.py"]
+        for name in names:
+            self.write(name)
+        self.write("dist/untracked.txt")
+        self.git("add", "--", *names)
+        findings = scanner.scan(self.root)
+        self.assertEqual([item.path for item in findings], sorted(names))
+        self.assertEqual({item.code for item in findings},
+                         {"tracked_file_in_skipped_directory"})
+        self.assertEqual({item.line for item in findings}, {0})
+        self.assertEqual(len({item.detail for item in findings}), 1)
+        self.assertEqual([item.key() for item in findings],
+                         [item.key() for item in scanner.scan(self.root)])
+
+    def test_ignored_but_force_indexed_file_is_rejected(self):
+        (self.root / ".gitignore").write_text("dist/\n", encoding="utf-8")
+        self.write("dist/committed.txt")
+        self.git("add", "-f", "dist/committed.txt")
+        self.assertEqual([item.code for item in scanner.scan(self.root)],
+                         ["tracked_file_in_skipped_directory"])
+
+    def test_missing_indexed_file_still_has_tracked_state(self):
+        path = self.write("build/missing.txt")
+        self.git("add", "build/missing.txt")
+        path.unlink()
+        self.assertEqual([item.path for item in scanner.scan(self.root)],
+                         ["build/missing.txt"])
+
+    def test_subdirectory_scan_uses_root_relative_paths(self):
+        self.write("scope/dist/committed.txt")
+        self.write("outside/build/committed.txt")
+        self.git("add", ".")
+        self.assertEqual([item.path for item in scanner.scan(self.root / "scope")],
+                         ["dist/committed.txt"])
+
+    def test_scan_root_inside_skipped_directory_still_rejects_tracked_file(self):
+        self.write("dist/committed.txt")
+        self.git("add", "dist/committed.txt")
+        findings = scanner.scan(self.root / "dist")
+        self.assertEqual([item.path for item in findings], ["committed.txt"])
+        self.assertEqual([item.code for item in findings],
+                         ["tracked_file_in_skipped_directory"])
+
+    def test_non_git_source_tree_preserves_existing_skips(self):
+        shutil.rmtree(self.root / ".git")
+        self.write("build/local.txt")
+        self.write("dist/local.txt")
+        self.assertEqual(scanner.scan(self.root), [])
+
+    def test_linked_worktree_index_is_checked(self):
+        self.write("public.txt")
+        self.git("add", "public.txt")
+        self.git("-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                 "commit", "-qm", "Synthetic base")
+        linked = self.root / "linked"
+        self.git("worktree", "add", "--detach", "-q", str(linked))
+        path = linked / "dist" / "committed.txt"
+        path.parent.mkdir()
+        path.write_text("public data\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(linked), "add", "dist/committed.txt"],
+                       check=True, capture_output=True)
+        self.assertTrue((linked / ".git").is_file())
+        self.assertEqual([item.path for item in scanner.scan(linked)],
+                         ["dist/committed.txt"])
+
+
+def synthetic_share_url(token=None, domain="chatgpt.com"):
+    # Every ID here is synthetic; no captured personal URL is needed.
+    token = token or ("12345678-" + "1234-1234-1234-" + "123456789abc")
+    return "https://" + domain + "/share/" + token
+
+
+class GenericHygieneHardeningTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="hygiene-generic-test-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+
+    def findings(self, body, name="public.md"):
+        path = self.root / name
+        path.write_text(body, encoding="utf-8")
+        return scanner.scan_file(path, name)
+
+    def codes(self, body, name="public.md"):
+        return {item.code for item in self.findings(body, name)}
+
+    def test_signing_and_keychain_shapes_are_forbidden(self):
+        for suffix in ("p8", "mobileprovision", "provisionprofile",
+                       "keychain", "keychain-db", "P8", "KEYCHAIN-DB"):
+            with self.subTest(suffix=suffix):
+                self.assertIn("secret_bearing_file",
+                              self.codes("binary or text data", "signing." + suffix))
+
+    def test_public_apple_project_and_configuration_shapes_pass(self):
+        for name in ("App.entitlements", "Info.plist", "project.pbxproj",
+                     "public.xcconfig", "signing.p8.example", "keychain-notes.md"):
+            with self.subTest(name=name):
+                self.assertEqual(self.findings("public data", name), [])
+
+    def test_share_link_shapes_are_detected(self):
+        for domain in ("chatgpt.com", "chat.openai.com", "CHATGPT.COM"):
+            with self.subTest(domain=domain):
+                self.assertIn("sensitive_chatgpt_share_url",
+                              self.codes(synthetic_share_url(domain=domain) + "?query=x"))
+        self.assertIn("sensitive_chatgpt_share_url",
+                      self.codes(synthetic_share_url().upper()))
+
+    def test_nonmatching_public_urls_pass(self):
+        for value in ("https://chatgpt.com/", "https://chatgpt.com/share/",
+                      "https://chatgpt.com/share/example", "https://example.com/share/",
+                      synthetic_share_url(domain="chatgpt.com.example.com"),
+                      synthetic_share_url(domain="example.com"),
+                      synthetic_share_url() + "abcdef"):
+            with self.subTest(value=value):
+                self.assertEqual(self.findings(value), [])
+
+    def test_share_exemption_requires_marker_and_reserved_synthetic_id(self):
+        value = synthetic_share_url(scanner.SYNTHETIC_SHARE_ID)
+        self.assertIn("sensitive_chatgpt_share_url", self.codes(value))
+        self.assertEqual(self.findings(scanner.SHARE_MARKER + "\n" + value), [])
+        self.assertEqual(self.findings(value + " # " + scanner.SHARE_MARKER), [])
+        self.assertIn("sensitive_chatgpt_share_url",
+                      self.codes(scanner.SHARE_MARKER + "\n" + synthetic_share_url()))
+
+    def test_share_exemption_does_not_exempt_other_matches_or_later_lines(self):
+        reserved = synthetic_share_url(scanner.SYNTHETIC_SHARE_ID)
+        body = scanner.SHARE_MARKER + "\n" + reserved + " " + synthetic_share_url()
+        self.assertEqual(len(self.findings(body)), 1)
+        self.assertEqual(len(self.findings(scanner.SHARE_MARKER + "\n\n" + reserved)), 1)
+        body = scanner.SHARE_MARKER + "\n" + reserved + " " + synthetic_home_path()
+        self.assertIn("private_home_path", self.codes(body))
+        body = scanner.SHARE_MARKER + "\n" + reserved + " " + synthetic_issue_reference()
+        self.assertIn("internal_issue_reference", self.codes(body))
+        body = scanner.SHARE_MARKER + "\n" + reserved + " " + synthetic_github_token()
+        self.assertIn("credential_github_token", self.codes(body))
+
+    def test_credential_marker_cannot_exempt_a_share_token(self):
+        body = scanner.MARKER + "\n" + synthetic_share_url()
+        self.assertIn("sensitive_chatgpt_share_url", self.codes(body))
+
+    def test_decimal_html_entities_are_not_issue_references(self):
+        for name in ("public.html", "public.css", "public.js", "public.md"):
+            with self.subTest(name=name):
+                self.assertEqual(self.findings("&#39; &#8212; &#123456;", name), [])
+
+    def test_html_issue_references_and_malformed_entities_still_fail(self):
+        for value in (synthetic_issue_reference(), "&" + "#" + "39",
+                      "#" + "39;", "#" + "123456"):
+            for name in ("public.html", "public.css", "public.js"):
+                with self.subTest(value=value, name=name):
+                    self.assertIn("internal_issue_reference", self.codes(value, name))
 
 
 if __name__ == "__main__":
